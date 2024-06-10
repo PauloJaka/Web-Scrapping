@@ -1,60 +1,80 @@
-from bs4 import BeautifulSoup
 import requests
-import pandas as pd
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-# get the user agent of you .env arquive
-# to get the user agent just put "my user agent" on your browser.
 user_agent = os.getenv('USER_AGENT')
 
-def scrapper(page, title, location):
-    headers = {'User-Agent': user_agent}
-    url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={title}&location={location}&start={page}"
-    r = requests.get(url, headers=headers)
-    soup = BeautifulSoup(r.content, 'lxml')
-    return soup
+def scrape_indeed_jobs(job_title, location):
+    # Configurar a URL de busca
+    url = f"https://www.indeed.com/jobs?q={job_title}&l={location}"
+    
+    headers = {
+        "User-Agent": user_agent
+    }
+    
+    # Enviar uma requisição HTTP para o Indeed
+    response = requests.get(url, headers=headers)
+    # Enviar uma requisição HTTP para o Indeed
+    response = requests.get(url)
+    
+    # Verificar se a requisição foi bem-sucedida
+    if response.status_code != 200:
+        print("Falha ao acessar o Indeed")
+        return []
 
-def main_scraper(soup):
-    jobs = soup.find_all('div', class_='base-card relative w-full hover:no-underline focus:no-underline base-card--link base-search-card base-search-card--link job-search-card')
-    for item in jobs:
-        title = item.find('a').text.strip()
-        company = item.find('h4').text.strip()
-        link = item.a['href']
-        location = item.find('span', class_='job-search-card__location').text.strip()
-        job_posted = item.find('time', class_='job-search-card__listdate')
-        if job_posted is not None:
-            time = job_posted.text.strip()
-            job = {
-                'Title': title,
-                'Link': link,
-                'Company': company,
-                'Location': location,
-                'Job_posted': time
-            }
-            joblist.append(job)
-    return
+    # Criar objeto BeautifulSoup
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Encontrar todas as divs de vaga
+    job_cards = soup.find_all('div', class_='jobsearch-SerpJobCard')
+    
+    # Lista para armazenar informações das vagas
+    jobs = []
+    
+    # Extrair informações de cada vaga
+    for job_card in job_cards:
+        title = job_card.find('h2', class_='title').text.strip()
+        company = job_card.find('span', class_='company').text.strip()
+        location = job_card.find('div', class_='location').text.strip() if job_card.find('div', class_='location') else 'N/A'
+        summary = job_card.find('div', class_='summary').text.strip()
+        salary = job_card.find('span', class_='salaryText').text.strip() if job_card.find('span', class_='salaryText') else 'N/A'
+        
+        # Inferir a senioridade a partir do título da vaga
+        seniority = 'N/A'
+        if 'junior' in title.lower():
+            seniority = 'Junior'
+        elif 'senior' in title.lower():
+            seniority = 'Senior'
+        elif 'intern' in title.lower() or 'trainee' in title.lower():
+            seniority = 'Intern/Trainee'
+        elif 'lead' in title.lower() or 'manager' in title.lower():
+            seniority = 'Lead/Manager'
+        
+        # Armazenar informações da vaga em um dicionário
+        jobs.append({
+            'title': title,
+            'company': company,
+            'location': location,
+            'summary': summary,
+            'salary': salary,
+            'seniority': seniority
+        })
+    
+    return jobs
 
+# Exemplo de uso
+job_title = "Dados"
+location = "Brasil"
+jobs = scrape_indeed_jobs(job_title, location)
 
-def scrape_jobs(title, location):
-    global joblist
-    joblist = []
-    page = 0
-
-    # Feel free to change the number of job list you want to scrape
-    for i in range(0, 20, 20):
-        print(f'Getting Page, {i}')
-        soup = scrapper(page, title, location)
-        main_scraper(soup)
-
-    df = pd.DataFrame(joblist)
-    return df
-
-# Scrape jobs for different titles
-df_dados = scrape_jobs('Dados', 'Brasil')
-print(df_dados)
-
-df_engenheiro = scrape_jobs('Python', 'Brasil')
-print(df_engenheiro)
+for job in jobs:
+    print(f"Title: {job['title']}")
+    print(f"Company: {job['company']}")
+    print(f"Location: {job['location']}")
+    print(f"Summary: {job['summary']}")
+    print(f"Salary: {job['salary']}")
+    print(f"Seniority: {job['seniority']}")
+    print("-" * 40)
