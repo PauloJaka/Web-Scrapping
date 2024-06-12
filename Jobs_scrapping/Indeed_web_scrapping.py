@@ -27,5 +27,6 @@ def transform(soup):
     return 
 
 c = scrap_extract('Dados', 'Brasil', 0)
+
 transform(c)
     
