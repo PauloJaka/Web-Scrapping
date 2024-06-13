@@ -7,7 +7,7 @@ load_dotenv('load.env')
 user_agent = os.getenv('USER_AGENT')
 
 def scrap_extract(job_title, location, page):
-    # Configurar a URL de busca
+    # Config the url
     url = f"https://br.indeed.com/jobs?q={job_title}&l={location}&start={page}"
     
     headers = { 
