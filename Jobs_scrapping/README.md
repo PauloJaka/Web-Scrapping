@@ -58,4 +58,19 @@ Run the indeed_jobs_scrappy.py script.
 
         python indeed_jobs_scrappy.py
 
+
+# Amazon Web Scraper
+
+Overview
+The Amazon web scraper retrieves product information from Amazon based on specified search criteria.
+
+Prerequisites
+        
+        Set up the .env file with the path to the GeckoDriver (install it from his github)
+    
+        selenium 
+
+just run python amazon_webscrappy.py
+
+    
 Feel free to customize this README further to include additional information or instructions specific to your project.
