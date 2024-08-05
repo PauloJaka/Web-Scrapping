@@ -31,7 +31,6 @@ def collect_data_from_page(url):
             title_element = item.select_one(".ui-search-item__title")
             price_element = item.select_one(".price-tag-fraction")
             rating_element = item.select_one(".ui-search-reviews__rating-number")
-            
             title = title_element.text.strip() if title_element else "No title"
             price = price_element.text.strip() if price_element else "No price"
             rating = rating_element.text.strip() if rating_element else ' '
