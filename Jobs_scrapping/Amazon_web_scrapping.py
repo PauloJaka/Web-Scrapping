@@ -14,7 +14,10 @@ known_brands = [
     "Marca Fácil", "Microsoft", "AWOW", "Gateway", "Compaq", "DAUERHAFT",
     "SGIN", "Luqeeg", "Kiboule", "LG", "Panasonic", "Focket", "Toughbook",
     "LTI", "GIGABYTE", "Octoo", "Chip7 Informática", "GLOGLOW", "GOLDENTEC",
-    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki"
+    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki",
+    "Motorola", "Xiaomi", "Nokia", "Poco", "realme", "Infinix", "Blu",
+    "Gshield", "Geonav", "Redmi", "Gorila Shield", "intelbras", "TCL",
+    "Tecno", "Vbestlife", "MaiJin", "SZAMBIT", "Otterbox", "Sony"
 ]
 
 def initialize_driver(gecko_path, headless=True):
@@ -60,14 +63,7 @@ def collect_data_from_page(driver, product_type):
             continue
     return products
 
-def get_product_type_from_url(url):
-    parsed_url = urlparse(url)
-    query_params = parse_qs(parsed_url.query)
-    product_type = query_params.get('k', [''])[0]
-    return product_type
-
-def scrape_amazon(gecko_path, base_url, num_pages=1, headless=True):
-    product_type = get_product_type_from_url(base_url)
+def scrape_amazon(gecko_path, base_url, product_type, num_pages=1, headless=True):
     driver = initialize_driver(gecko_path, headless)
     
     all_products = []
@@ -88,13 +84,18 @@ def scrape_amazon(gecko_path, base_url, num_pages=1, headless=True):
 
 def main():
     gecko_path = os.getenv('Driver')
-    base_url = "https://www.amazon.com.br/s?k=notebook"
+    products_list = ["Notebook", "Smartphone"] 
     num_pages = 1  
 
-    df = scrape_amazon(gecko_path, base_url, num_pages, headless=True)
+    all_data = pd.DataFrame()
+
+    for product in products_list:
+        base_url = f"https://www.amazon.com.br/s?k={product}"
+        df = scrape_amazon(gecko_path, base_url, product, num_pages, headless=True)
+        all_data = pd.concat([all_data, df], ignore_index=True)
 
     # Printar os dados
-    print(df.to_string(index=False))
+    print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
     main()
