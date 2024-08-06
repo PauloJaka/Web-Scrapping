@@ -9,10 +9,14 @@ known_brands = [
     "Marca Fácil", "Microsoft", "AWOW", "Gateway", "Compaq", "DAUERHAFT",
     "SGIN", "Luqeeg", "Kiboule", "LG", "Panasonic", "Focket", "Toughbook",
     "LTI", "GIGABYTE", "Octoo", "Chip7 Informática", "GLOGLOW", "GOLDENTEC",
-    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki"
+    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki", "Galaxy",
+    "Motorola", "SAMSUNG", "Xiaomi", "Apple", "Multilaser", "Positivo", "Nokia",
+    "Poco", "realme", "Infinix", "ASUS", "Blu", "Gshield", "Geonav", "Redmi",
+    "Gorila Shield", "intelbras", "TCL", "Tecno", "Vbestlife", "MaiJin", "SZAMBIT",
+    "Otterbox", "Sony"
 ]
 
-def collect_data_from_page(url):
+def collect_data_from_page(url, current_product):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
@@ -46,6 +50,7 @@ def collect_data_from_page(url):
                 'price': price,
                 'brand': brand,
                 'rating': rating,
+                'product': current_product,
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'website': 'Mercado Livre'
@@ -55,26 +60,30 @@ def collect_data_from_page(url):
             continue
     return products
 
-def scrape_mercado_livre(base_url, num_pages=1):
+def scrape_mercado_livre(base_url, current_product, num_pages=1):
     all_products = []
     
     for page in range(1, num_pages + 1):
         url = f"{base_url}_Desde_{(page-1)*50 + 1}"
-        products = collect_data_from_page(url)
+        products = collect_data_from_page(url, current_product)
         all_products.extend(products)
     
     return pd.DataFrame(all_products)
 
-def main():
-    base_url = "https://lista.mercadolivre.com.br/notebook"  
+def main(products):
+    all_data = pd.DataFrame()
     num_pages = 1  
 
-    df = scrape_mercado_livre(base_url, num_pages)
+    for product in products:
+        base_url = f"https://lista.mercadolivre.com.br/{product}"
+        df = scrape_mercado_livre(base_url, product, num_pages)
+        all_data = pd.concat([all_data, df], ignore_index=True)
 
-    if df.empty:
+    if all_data.empty:
         print("Nenhum dado foi coletado. Verifique os seletores de CSS e a estrutura da página.")
     else:
-        print(df.to_string(index=False))
+        print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
-    main()
+    products_list = ["notebook", "smartphone"]  
+    main(products_list)
