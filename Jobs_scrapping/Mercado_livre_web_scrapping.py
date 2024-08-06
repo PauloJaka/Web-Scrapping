@@ -28,7 +28,7 @@ def collect_data_from_page(url, current_product):
     product_elements = soup.select(".ui-search-result__wrapper")
     
     if not product_elements:
-        print("Nenhum elemento de produto encontrado. Verifique os seletores de CSS.")
+        print(f"Neither element found.")
     
     for item in product_elements:
         try:
@@ -56,7 +56,7 @@ def collect_data_from_page(url, current_product):
                 'website': 'Mercado Livre'
             })
         except Exception as e:
-            print(f"Erro ao processar item: {e}")
+            print(f"Error: {e}")
             continue
     return products
 
@@ -80,7 +80,7 @@ def main(products):
         all_data = pd.concat([all_data, df], ignore_index=True)
 
     if all_data.empty:
-        print("Nenhum dado foi coletado. Verifique os seletores de CSS e a estrutura da página.")
+        print("Empty data")
     else:
         print(all_data.to_string(index=False))
 
