@@ -2,19 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
-
-known_brands = [
-    "ACER", "ASUS", "SAMSUNG", "Dell", "Positivo", "Lenovo", "VAIO",
-    "HP", "Apple", "Multilaser", "Anvazise", "ASHATA", "Santino", "MSI",
-    "Marca Fácil", "Microsoft", "AWOW", "Gateway", "Compaq", "DAUERHAFT",
-    "SGIN", "Luqeeg", "Kiboule", "LG", "Panasonic", "Focket", "Toughbook",
-    "LTI", "GIGABYTE", "Octoo", "Chip7 Informática", "GLOGLOW", "GOLDENTEC",
-    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki", "Galaxy",
-    "Motorola", "SAMSUNG", "Xiaomi", "Apple", "Multilaser", "Positivo", "Nokia",
-    "Poco", "realme", "Infinix", "ASUS", "Blu", "Gshield", "Geonav", "Redmi",
-    "Gorila Shield", "intelbras", "TCL", "Tecno", "Vbestlife", "MaiJin", "SZAMBIT",
-    "Otterbox", "Sony"
-]
+from utils import known_brands
 
 def collect_data_from_page(url, current_product):
     headers = {
@@ -28,17 +16,20 @@ def collect_data_from_page(url, current_product):
     product_elements = soup.select(".ui-search-result__wrapper")
     
     if not product_elements:
-        print(f"Neither element found.")
+        print("No product elements found.")
     
     for item in product_elements:
         try:
             title_element = item.select_one(".ui-search-item__title")
             price_element = item.select_one(".price-tag-fraction")
             rating_element = item.select_one(".ui-search-reviews__rating-number")
+            free_freight_element = item.select_one(".ui-pb-highlight-content .ui-pb-highlight")
+
             title = title_element.text.strip() if title_element else "No title"
             price = price_element.text.strip() if price_element else "No price"
-            rating = rating_element.text.strip() if rating_element else ' '
-            
+            rating = rating_element.text.strip() if rating_element else 'No rating'
+            free_freight = free_freight_element and "Frete grátis" in free_freight_element.text
+
             brand = "Unknown"
             for known_brand in known_brands:
                 if known_brand.lower() in title.lower():
@@ -50,6 +41,7 @@ def collect_data_from_page(url, current_product):
                 'price': price,
                 'brand': brand,
                 'rating': rating,
+                'free_freight': free_freight,
                 'product': current_product,
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
