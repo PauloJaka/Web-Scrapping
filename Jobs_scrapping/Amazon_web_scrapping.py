@@ -38,10 +38,18 @@ def collect_data_from_page(driver, product_type):
             title_element = item.find_element(By.CSS_SELECTOR, "h2 a span")
             price_element = item.find_element(By.CSS_SELECTOR, ".a-price-whole")
             rating_element = item.find_element(By.CSS_SELECTOR, ".a-icon-alt")
+            link_element = item.find_element(By.CSS_SELECTOR, "a.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal")
             
             title = title_element.text
             price = price_element.text
             rating = rating_element.get_attribute("innerHTML").split()[0] if rating_element else "No rating"
+            link = link_element.get_attribute("href") if link_element else "No link"
+            
+            try:
+                free_freight = item.find_element(By.CSS_SELECTOR, "span[aria-label='Opção de frete GRÁTIS disponível']")
+                free_freight = True
+            except:
+                free_freight = False
             
             brand = "Unknown"
             for known_brand in known_brands:
@@ -54,6 +62,8 @@ def collect_data_from_page(driver, product_type):
                 'price': price,
                 'brand': brand,
                 'rating': rating,
+                'free_freight': free_freight,
+                'link': link,
                 'product_type': product_type,
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -77,7 +87,7 @@ def scrape_amazon(gecko_path, base_url, product_type, num_pages=1, headless=True
         products = collect_data_from_page(driver, product_type)
         all_products.extend(products)
     
-    # Fechar o driver
+    
     driver.quit()
     
     return pd.DataFrame(all_products)
@@ -94,7 +104,7 @@ def main():
         df = scrape_amazon(gecko_path, base_url, product, num_pages, headless=True)
         all_data = pd.concat([all_data, df], ignore_index=True)
 
-    # Printar os dados
+    
     print(all_data.to_string(index=False))
 
 if __name__ == "__main__":

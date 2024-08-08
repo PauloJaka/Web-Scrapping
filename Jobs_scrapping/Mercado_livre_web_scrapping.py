@@ -21,14 +21,16 @@ def collect_data_from_page(url, current_product):
     for item in product_elements:
         try:
             title_element = item.select_one(".ui-search-item__title")
-            price_element = item.select_one(".price-tag-fraction")
+            price_element = item.select_one(".andes-money-amount__fraction")
             rating_element = item.select_one(".ui-search-reviews__rating-number")
             free_freight_element = item.select_one(".ui-pb-highlight-content .ui-pb-highlight")
-
+            link_element = item.select_one("a.ui-search-link")
+            
             title = title_element.text.strip() if title_element else "No title"
             price = price_element.text.strip() if price_element else "No price"
             rating = rating_element.text.strip() if rating_element else 'No rating'
             free_freight = free_freight_element and "Frete grátis" in free_freight_element.text
+            link = link_element['href'] if link_element else "No link"
 
             brand = "Unknown"
             for known_brand in known_brands:
@@ -40,6 +42,7 @@ def collect_data_from_page(url, current_product):
                 'title': title,
                 'price': price,
                 'brand': brand,
+                'link': link,
                 'rating': rating,
                 'free_freight': free_freight,
                 'product': current_product,

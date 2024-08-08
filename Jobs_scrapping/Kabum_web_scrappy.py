@@ -54,7 +54,7 @@ def collect_data_from_page(driver):
                 'price': price,
                 'brand': brand,
                 'link': link,
-                'free_freight': False,  # KaBuM! não tem frete grátis
+                'free_freight': False,  
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'website': 'KaBuM'
@@ -97,7 +97,7 @@ def main():
         df = scrape_kabum(gecko_path, base_url, num_pages, headless=True)
         all_data = pd.concat([all_data, df], ignore_index=True)
 
-    # Printar os dados
+    
     print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
