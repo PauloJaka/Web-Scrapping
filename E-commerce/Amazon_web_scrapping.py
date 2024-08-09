@@ -7,18 +7,7 @@ import time
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 import os
-
-known_brands = [
-    "ACER", "ASUS", "SAMSUNG", "Dell", "Positivo", "Lenovo", "VAIO",
-    "HP", "Apple", "Multilaser", "Anvazise", "ASHATA", "Santino", "MSI",
-    "Marca Fácil", "Microsoft", "AWOW", "Gateway", "Compaq", "DAUERHAFT",
-    "SGIN", "Luqeeg", "Kiboule", "LG", "Panasonic", "Focket", "Toughbook",
-    "LTI", "GIGABYTE", "Octoo", "Chip7 Informática", "GLOGLOW", "GOLDENTEC",
-    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki",
-    "Motorola", "Xiaomi", "Nokia", "Poco", "realme", "Infinix", "Blu",
-    "Gshield", "Geonav", "Redmi", "Gorila Shield", "intelbras", "TCL",
-    "Tecno", "Vbestlife", "MaiJin", "SZAMBIT", "Otterbox", "Sony"
-]
+from utils import known_brands
 
 def initialize_driver(gecko_path, headless=True):
     firefox_options = Options()
