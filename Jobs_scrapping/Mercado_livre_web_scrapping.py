@@ -26,6 +26,7 @@ def collect_data_from_page(url, current_product):
             free_freight_element = item.select_one(".ui-pb-highlight-content .ui-pb-highlight")
             link_element = item.select_one("a.ui-search-link")
             
+            
             title = title_element.text.strip() if title_element else "No title"
             price = price_element.text.strip() if price_element else "No price"
             rating = rating_element.text.strip() if rating_element else 'No rating'

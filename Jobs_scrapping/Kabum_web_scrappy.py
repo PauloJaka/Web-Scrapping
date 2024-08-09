@@ -6,19 +6,7 @@ import pandas as pd
 import time
 from datetime import datetime
 import os
-
-# Lista de marcas conhecidas
-known_brands = [
-    "ACER", "ASUS", "SAMSUNG", "Dell", "Positivo", "Lenovo", "VAIO",
-    "HP", "Apple", "Multilaser", "Anvazise", "ASHATA", "Santino", "MSI",
-    "Marca Fácil", "Microsoft", "AWOW", "Gateway", "Compaq", "DAUERHAFT",
-    "SGIN", "Luqeeg", "Kiboule", "LG", "Panasonic", "Focket", "Toughbook",
-    "LTI", "GIGABYTE", "Octoo", "Chip7 Informática", "GLOGLOW", "GOLDENTEC",
-    "KUU", "HEEPDD", "Adamantiun", "Naroote", "Jectse", "Heayzoki",
-    "Motorola", "Xiaomi", "Nokia", "Poco", "realme", "Infinix", "Blu",
-    "Gshield", "Geonav", "Redmi", "Gorila Shield", "intelbras", "TCL",
-    "Tecno", "Vbestlife", "MaiJin", "SZAMBIT", "Otterbox", "Sony"
-]
+from utils import known_brands
 
 def initialize_driver(gecko_path, headless=True):
     firefox_options = Options()
@@ -29,7 +17,7 @@ def initialize_driver(gecko_path, headless=True):
     driver = webdriver.Firefox(service=service, options=firefox_options)
     return driver
 
-def collect_data_from_page(driver):
+def collect_data_from_page(driver, product_type):
     products = []
     product_elements = driver.find_elements(By.CSS_SELECTOR, "article.sc-9d1f1537-7.hxuzLm.productCard")
     
@@ -38,6 +26,13 @@ def collect_data_from_page(driver):
             price_element = item.find_element(By.CSS_SELECTOR, "span.priceCard")
             name_element = item.find_element(By.CSS_SELECTOR, "span.nameCard")
             link_element = item.find_element(By.CSS_SELECTOR, "a")
+
+            try:
+                star_div = item.find_element(By.CSS_SELECTOR, "div.sc-e32b6973-3.dlFNar.estrelasAvaliacao")
+                star = star_div.find_elements(By.CSS_SELECTOR, "div.sc-e32b6973-2.iYjzAb.estrelaAvaliacao")
+                star_quantity = len(star)
+            except:
+                star_quantity = 3  
 
             price = price_element.text
             name = name_element.text
@@ -54,7 +49,9 @@ def collect_data_from_page(driver):
                 'price': price,
                 'brand': brand,
                 'link': link,
-                'free_freight': False,  
+                'rating': star_quantity,  
+                'product_type': product_type,
+                'free_freight': False,
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'website': 'KaBuM'
@@ -63,7 +60,7 @@ def collect_data_from_page(driver):
             continue
     return products
 
-def scrape_kabum(gecko_path, base_url, num_pages=1, headless=True):
+def scrape_kabum(gecko_path, base_url, product_type, num_pages=1, headless=True):
     driver = initialize_driver(gecko_path, headless)
     
     all_products = []
@@ -74,7 +71,7 @@ def scrape_kabum(gecko_path, base_url, num_pages=1, headless=True):
         
         time.sleep(5)
         
-        products = collect_data_from_page(driver)
+        products = collect_data_from_page(driver, product_type)
         all_products.extend(products)
     
     driver.quit()
@@ -84,20 +81,19 @@ def scrape_kabum(gecko_path, base_url, num_pages=1, headless=True):
 def main():
     gecko_path = os.getenv('Driver')
     category_urls = {
-        # "Celular & Smartphone": "https://www.kabum.com.br/celular-smartphone/smartphones",
+        # "Smartphone": "https://www.kabum.com.br/celular-smartphone/smartphones",
         # "TV": "https://www.kabum.com.br/tv",
         # "Tablets, iPads e E-readers": "https://www.kabum.com.br/tablets-ipads-e-readers",
-        "Computador": "https://www.kabum.com.br/computadores/notebooks"
+        "Notebook": "https://www.kabum.com.br/computadores/notebooks"
     }
     num_pages = 1
 
     all_data = pd.DataFrame()
 
-    for category, base_url in category_urls.items():
-        df = scrape_kabum(gecko_path, base_url, num_pages, headless=True)
+    for product_type, base_url in category_urls.items():
+        df = scrape_kabum(gecko_path, base_url, product_type, num_pages, headless=True)
         all_data = pd.concat([all_data, df], ignore_index=True)
 
-    
     print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
