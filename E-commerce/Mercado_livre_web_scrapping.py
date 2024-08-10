@@ -3,8 +3,9 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 from utils import known_brands
+import re
 
-def collect_data_from_page(url, current_product):
+def collect_data_from_page(url, current_product, known_brands):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
@@ -21,17 +22,24 @@ def collect_data_from_page(url, current_product):
     for item in product_elements:
         try:
             title_element = item.select_one(".ui-search-item__title")
-            price_element = item.select_one(".andes-money-amount__fraction")
+            original_price_element = item.select_one(".andes-money-amount__fraction")  
             rating_element = item.select_one(".ui-search-reviews__rating-number")
             free_freight_element = item.select_one(".ui-pb-highlight-content .ui-pb-highlight")
             link_element = item.select_one("a.ui-search-link")
-            
+            discount_price_element = item.select_one(".ui-search-installments-prefix span") 
             
             title = title_element.text.strip() if title_element else "No title"
-            price = price_element.text.strip() if price_element else "No price"
+            original_price = original_price_element.text.strip() if original_price_element else "No original price"  
             rating = rating_element.text.strip() if rating_element else 'No rating'
             free_freight = free_freight_element and "Frete grátis" in free_freight_element.text
             link = link_element['href'] if link_element else "No link"
+
+            if discount_price_element:  
+                discount_price_text = discount_price_element.text.strip()  
+                discount_price = re.findall(r'\d+\.?\d*', discount_price_text)
+                discount_price = discount_price[0] if discount_price else ""
+            else:
+                discount_price = ""
 
             brand = "Unknown"
             for known_brand in known_brands:
@@ -41,7 +49,8 @@ def collect_data_from_page(url, current_product):
 
             products.append({
                 'title': title,
-                'price': price,
+                'original_price': original_price, 
+                'discount_price': discount_price,  
                 'brand': brand,
                 'link': link,
                 'rating': rating,
@@ -56,12 +65,13 @@ def collect_data_from_page(url, current_product):
             continue
     return products
 
+
 def scrape_mercado_livre(base_url, current_product, num_pages=1):
     all_products = []
     
     for page in range(1, num_pages + 1):
         url = f"{base_url}_Desde_{(page-1)*50 + 1}"
-        products = collect_data_from_page(url, current_product)
+        products = collect_data_from_page(url, current_product, known_brands)
         all_products.extend(products)
     
     return pd.DataFrame(all_products)
