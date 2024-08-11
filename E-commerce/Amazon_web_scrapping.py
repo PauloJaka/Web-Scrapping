@@ -25,14 +25,16 @@ def collect_data_from_page(driver, product_type):
     for item in product_elements:
         try:
             title_element = item.find_element(By.CSS_SELECTOR, "h2 a span")
-            price_element = item.find_element(By.CSS_SELECTOR, ".a-price-whole")
+            price_element_discount = item.find_element(By.CSS_SELECTOR, ".a-price-whole")
             rating_element = item.find_element(By.CSS_SELECTOR, ".a-icon-alt")
             link_element = item.find_element(By.CSS_SELECTOR, "a.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal")
+            original_price_element = item.find_element(By.CSS_SELECTOR, ".a-price.a-text-price .a-offscreen")
             
             title = title_element.text
-            price = price_element.text
+            discount_price = price_element_discount.text
             rating = rating_element.get_attribute("innerHTML").split()[0] if rating_element else "No rating"
             link = link_element.get_attribute("href") if link_element else "No link"
+            original_price = original_price_element.text if original_price_element else ""
             
             try:
                 free_freight = item.find_element(By.CSS_SELECTOR, "span[aria-label='Opção de frete GRÁTIS disponível']")
@@ -48,7 +50,8 @@ def collect_data_from_page(driver, product_type):
 
             products.append({
                 'title': title,
-                'price': price,
+                'price_discount': discount_price,
+                'price_original': original_price,
                 'brand': brand,
                 'rating': rating,
                 'free_freight': free_freight,
