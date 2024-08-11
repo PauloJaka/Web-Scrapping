@@ -49,8 +49,8 @@ def collect_data_from_page(url, current_product, known_brands):
 
             products.append({
                 'title': title,
-                'original_price': original_price, 
-                'discount_price': discount_price,  
+                'price_original': original_price, 
+                'price_discount': discount_price,  
                 'brand': brand,
                 'link': link,
                 'rating': rating,
