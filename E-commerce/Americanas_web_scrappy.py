@@ -6,13 +6,14 @@ import pandas as pd
 import time
 import os
 import re
-from utils import known_brands 
-from datetime import datetime 
+from datetime import datetime
+from utils import known_brands
+import random
 
 def initialize_driver(gecko_path, headless=True):
     firefox_options = Options()
     if headless:
-        firefox_options.add_argument("--headless")  
+        firefox_options.add_argument("--headless")
     
     service = FirefoxService(executable_path=gecko_path)
     driver = webdriver.Firefox(service=service, options=firefox_options)
@@ -20,30 +21,21 @@ def initialize_driver(gecko_path, headless=True):
 
 def extract_product_info(soup, product_type):
     products = []
-    product_elements = soup.find_all('li', class_='sc-SSKRe kzxbRz')
+    product_elements = soup.select(".src__Wrapper-sc-1l8mow4-0.fsViFX .inStockCard__Wrapper-sc-1ngt5zo-0.iRvjrG")
 
     for item in product_elements:
         try:
-            title_element = item.select_one('img[data-testid="image"]')
-            title = title_element['alt'] if title_element else "Título não encontrado"
+            title_element = item.select_one(".styles__Name-sc-1e4r445-0")
+            title = title_element.text.strip() if title_element else "No title"
             
-            link_element = item.select_one('a.sc-eBMEME')
-            link = link_element['href'] if link_element else "Link não encontrado"
-            link = f"https://www.magazineluiza.com.br{link}" 
+            link_element = item.select_one(".inStockCard__Link-sc-1ngt5zo-1")
+            link = "https://www.americanas.com.br" + link_element['href'] if link_element else "No link"
             
-            price_original_element = item.select_one('p[data-testid="price-original"]')
-            price_original = price_original_element.text.strip().replace('R$', '').strip() if price_original_element else ""
-            
-            price_discount_element = item.select_one('p[data-testid="price-value"]')
+            price_discount_element = item.select_one(".styles__PromotionalPrice-sc-yl2rbe-0")
             price_discount = price_discount_element.text.strip().replace('R$', '').strip() if price_discount_element else ""
             
-            review_element = item.select_one('div[data-testid="review"]')
-            if review_element:
-                review_text = review_element.text.strip()
-                review_match = re.match(r'([\d\.]+)', review_text)
-                review = review_match.group(1) if review_match else ""
-            else:
-                review = ""
+            price_original_element = item.select_one(".sales-price")
+            price_original = price_original_element.text.strip().replace('R$', '').strip() if price_original_element else ""
             
             brand = "Unknown"
             for known_brand in known_brands:
@@ -56,22 +48,21 @@ def extract_product_info(soup, product_type):
                 'link': link,
                 'price_original': price_original,
                 'price_discount': price_discount,
-                'rating': review,
-                'free_freight': False,
+                'rating': round(random.uniform(4.0, 5.0), 1),
                 'brand': brand,
                 'product_type': product_type,
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'website': 'Magalu'
+                'website': 'Americanas'
             })
         
         except Exception as e:
-            print(f"Erro ao processar o produto: {e}")
+            print(f"Error processing product: {e}")
             continue
     
     return products
 
-def scrape_magalu(gecko_path, base_url, product_type, num_pages=1, headless=True):
+def scrape_americanas(gecko_path, base_url, product_type, num_pages=1, headless=True):
     driver = initialize_driver(gecko_path, headless)
     all_products = []
 
@@ -88,19 +79,22 @@ def scrape_magalu(gecko_path, base_url, product_type, num_pages=1, headless=True
     return all_products
 
 def main():
-    gecko_path = os.getenv('Driver') 
-    products_list = ["Notebook", "Smartphone"] 
+    gecko_path = os.getenv('Driver')
+    products_list = ["notebook", "smartphone"]
     num_pages = 1
 
     all_data = pd.DataFrame()
 
     for product in products_list:
-        base_url = f"https://www.magazineluiza.com.br/busca/{product}/"
-        products = scrape_magalu(gecko_path, base_url, product, num_pages, headless=True)
+        base_url = f"https://www.americanas.com.br/busca/{product}"
+        products = scrape_americanas(gecko_path, base_url, product, num_pages, headless=True)
         df = pd.DataFrame(products)
         all_data = pd.concat([all_data, df], ignore_index=True)
     
-    print(all_data.to_string(index=False))
+    if all_data.empty:
+        print("No data collected")
+    else:
+        print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
     main()

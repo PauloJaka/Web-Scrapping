@@ -5,14 +5,14 @@ from selenium.webdriver.firefox.options import Options
 import pandas as pd
 import time
 from datetime import datetime
-from urllib.parse import urlparse, parse_qs
 import os
 from utils import known_brands
+import re
 
 def initialize_driver(gecko_path, headless=True):
     firefox_options = Options()
     if headless:
-        firefox_options.add_argument("--headless")  # No interface
+        firefox_options.add_argument("--headless")  
     
     service = FirefoxService(executable_path=gecko_path)
     driver = webdriver.Firefox(service=service, options=firefox_options)
@@ -25,16 +25,14 @@ def collect_data_from_page(driver, product_type):
     for item in product_elements:
         try:
             title_element = item.find_element(By.CSS_SELECTOR, "h2 a span")
-            price_element_discount = item.find_element(By.CSS_SELECTOR, ".a-price-whole")
+            price_element_original = item.find_element(By.CSS_SELECTOR, ".a-price-whole")  
             rating_element = item.find_element(By.CSS_SELECTOR, ".a-icon-alt")
             link_element = item.find_element(By.CSS_SELECTOR, "a.a-link-normal.s-underline-text.s-underline-link-text.s-link-style.a-text-normal")
-            original_price_element = item.find_element(By.CSS_SELECTOR, ".a-price.a-text-price .a-offscreen")
             
             title = title_element.text
-            discount_price = price_element_discount.text
+            original_price = price_element_original.text 
             rating = rating_element.get_attribute("innerHTML").split()[0] if rating_element else "No rating"
             link = link_element.get_attribute("href") if link_element else "No link"
-            original_price = original_price_element.text if original_price_element else ""
             
             try:
                 free_freight = item.find_element(By.CSS_SELECTOR, "span[aria-label='Opção de frete GRÁTIS disponível']")
@@ -50,8 +48,7 @@ def collect_data_from_page(driver, product_type):
 
             products.append({
                 'title': title,
-                'price_discount': discount_price,
-                'price_original': original_price,
+                'price_original': original_price,   
                 'brand': brand,
                 'rating': rating,
                 'free_freight': free_freight,
@@ -64,6 +61,7 @@ def collect_data_from_page(driver, product_type):
         except Exception as e:
             continue
     return products
+
 
 def scrape_amazon(gecko_path, base_url, product_type, num_pages=1, headless=True):
     driver = initialize_driver(gecko_path, headless)
