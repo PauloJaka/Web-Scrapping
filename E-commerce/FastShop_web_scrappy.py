@@ -2,30 +2,50 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 from utils import known_brands
 import os
 import random
+import time
 
 def setup_selenium():
     options = Options()
-    options.add_argument("--headless")  
-    service = Service(executable_path= os.getenv('Driver'))  
+    options.add_argument("--headless")
+    service = Service(executable_path=os.getenv('Driver'))
     driver = webdriver.Firefox(service=service, options=options)
     return driver
+
+def scroll_to_load_products(driver, timeout=10, scroll_pause_time=2):
+    last_height = driver.execute_script("return document.body.scrollHeight")
+    
+    while True:
+        # Scroll down to bottom
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+
+        # Wait to load the page
+        time.sleep(scroll_pause_time)
+
+        # Calculate new scroll height and compare with last scroll height
+        new_height = driver.execute_script("return document.body.scrollHeight")
+        if new_height == last_height:
+            break
+        last_height = new_height
 
 def collect_data_from_fastshop(driver, url, current_product, known_brands):
     driver.get(url)
     driver.implicitly_wait(10)
-    
+
+    scroll_to_load_products(driver)
+
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     products = []
     product_elements = soup.select("app-product-item")
 
     if not product_elements:
-        print("No product elements found.")
+        return products
     
     for item in product_elements:
         try:
@@ -65,25 +85,19 @@ def collect_data_from_fastshop(driver, url, current_product, known_brands):
             continue
     return products
 
-def scrape_fastshop(driver, base_url, current_product, num_pages=1):
-    all_products = []
-    
-    for page in range(1, num_pages + 1):
-        url = f"{base_url}?page={page}"
-        products = collect_data_from_fastshop(driver, url, current_product, known_brands)
-        all_products.extend(products)
-    
-    return pd.DataFrame(all_products)
+def scrape_fastshop(driver, base_url, current_product):
+    url = base_url
+    products = collect_data_from_fastshop(driver, url, current_product, known_brands)
+    return pd.DataFrame(products)
 
 def main(products_dict):
     all_data = pd.DataFrame()
-    num_pages = 1
     
     driver = setup_selenium()
 
     try:
         for product, base_url in products_dict.items():
-            df = scrape_fastshop(driver, base_url, product, num_pages)
+            df = scrape_fastshop(driver, base_url, product)
             all_data = pd.concat([all_data, df], ignore_index=True)
     finally:
         driver.quit()
@@ -95,7 +109,7 @@ def main(products_dict):
 
 if __name__ == "__main__":
     products_dict = {
-        "Notebook": "https://www.fastshop.com.br/web/c/4611686018425306011/informatica"
-        #"Smartphone": "https://www.fastshop.com.br/web/c/4611686018425306012/telefonia"
+        "Notebook": "https://www.fastshop.com.br/web/c/4611686018425306011/informatica",
+        "Smartphone": "https://www.fastshop.com.br/web/c/22561/smartphones"
     }
     main(products_dict)
