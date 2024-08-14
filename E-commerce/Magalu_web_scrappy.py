@@ -6,7 +6,7 @@ import pandas as pd
 import time
 import os
 import re
-from utils import known_brands 
+from utils import known_brands
 from datetime import datetime 
 
 def initialize_driver(gecko_path, headless=True):
@@ -20,14 +20,14 @@ def initialize_driver(gecko_path, headless=True):
 
 def extract_product_info(soup, product_type):
     products = []
-    product_elements = soup.find_all('li', class_='sc-SSKRe kzxbRz')
+    product_elements = soup.find_all('li', class_='sc-fDinKg iFBKTS')  # Atualizado para o HTML fornecido
 
     for item in product_elements:
         try:
-            title_element = item.select_one('img[data-testid="image"]')
-            title = title_element['alt'] if title_element else "Título não encontrado"
+            title_element = item.select_one('h2[data-testid="product-title"]')
+            title = title_element.text.strip() if title_element else "Título não encontrado"
             
-            link_element = item.select_one('a.sc-eBMEME')
+            link_element = item.select_one('a[data-testid="product-card-container"]')
             link = link_element['href'] if link_element else "Link não encontrado"
             link = f"https://www.magazineluiza.com.br{link}" 
             
@@ -37,13 +37,10 @@ def extract_product_info(soup, product_type):
             price_discount_element = item.select_one('p[data-testid="price-value"]')
             price_discount = price_discount_element.text.strip().replace('R$', '').strip() if price_discount_element else ""
             
-            review_element = item.select_one('div[data-testid="review"]')
-            if review_element:
-                review_text = review_element.text.strip()
-                review_match = re.match(r'([\d\.]+)', review_text)
-                review = review_match.group(1) if review_match else ""
-            else:
-                review = ""
+            review_element = item.select_one('span[format="score-count"]')
+            review_text = review_element.text.strip() if review_element else ""
+            review_match = re.match(r'([\d\.]+)', review_text)
+            review = review_match.group(1) if review_match else ""
             
             brand = "Unknown"
             for known_brand in known_brands:
@@ -57,7 +54,7 @@ def extract_product_info(soup, product_type):
                 'price_original': price_original,
                 'price_discount': price_discount,
                 'rating': review,
-                'free_freight': False,
+                'free_freight': False,  
                 'brand': brand,
                 'product_type': product_type,
                 'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
