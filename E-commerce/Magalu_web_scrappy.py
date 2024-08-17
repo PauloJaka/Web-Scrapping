@@ -20,7 +20,11 @@ def initialize_driver(gecko_path, headless=True):
 
 def extract_product_info(soup, product_type):
     products = []
-    product_elements = soup.find_all('li', class_='sc-fDinKg iFBKTS')  # Atualizado para o HTML fornecido
+    ul_element = soup.find('ul', class_='sc-hknOHE RHqaG sc-kMribo kyNLGC sc-cGNDeh jUKQOs')
+    
+    if ul_element:
+        product_elements = ul_element.find_all('li', recursive=False)
+
 
     for item in product_elements:
         try:
@@ -93,7 +97,7 @@ def main():
 
     for product in products_list:
         base_url = f"https://www.magazineluiza.com.br/busca/{product}/"
-        products = scrape_magalu(gecko_path, base_url, product, num_pages, headless=True)
+        products = scrape_magalu(gecko_path, base_url, product, num_pages, headless=False)
         df = pd.DataFrame(products)
         all_data = pd.concat([all_data, df], ignore_index=True)
     
