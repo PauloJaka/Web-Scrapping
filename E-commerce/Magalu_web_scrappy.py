@@ -97,7 +97,7 @@ def main():
 
     for product in products_list:
         base_url = f"https://www.magazineluiza.com.br/busca/{product}/"
-        products = scrape_magalu(gecko_path, base_url, product, num_pages, headless=False)
+        products = scrape_magalu(gecko_path, base_url, product, num_pages, headless=True)
         df = pd.DataFrame(products)
         all_data = pd.concat([all_data, df], ignore_index=True)
     
