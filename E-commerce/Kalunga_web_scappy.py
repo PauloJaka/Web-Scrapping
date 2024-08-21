@@ -92,5 +92,5 @@ def main(products):
         print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
-    products_list = ["notebook", "smartphone"]  
+    products_list = ["notebook", "smartphone", "tv", "tablets"]  
     main(products_list)
