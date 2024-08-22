@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 from utils import known_brands
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 def collect_data_from_page(url, current_product, known_brands):
     headers = {
@@ -65,14 +66,17 @@ def collect_data_from_page(url, current_product, known_brands):
             continue
     return products
 
-
 def scrape_mercado_livre(base_url, current_product, num_pages=1):
     all_products = []
     
-    for page in range(1, num_pages + 1):
-        url = f"{base_url}_Desde_{(page-1)*50 + 1}"
-        products = collect_data_from_page(url, current_product, known_brands)
-        all_products.extend(products)
+    with ThreadPoolExecutor(max_workers=4) as executor:  
+        futures = []
+        for page in range(1, num_pages + 1):
+            url = f"{base_url}_Desde_{(page-1)*50 + 1}"
+            futures.append(executor.submit(collect_data_from_page, url, current_product, known_brands))
+        
+        for future in futures:
+            all_products.extend(future.result())
     
     return pd.DataFrame(all_products)
 
@@ -91,5 +95,5 @@ def main(products):
         print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
-    products_list = ["notebook", "smartphone"]  
+    products_list = ["notebook", "smartphone", "TV", "tablet"]  
     main(products_list)
