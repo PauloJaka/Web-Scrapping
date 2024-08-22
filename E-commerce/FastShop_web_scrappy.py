@@ -10,6 +10,7 @@ from utils import known_brands
 import os
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def setup_selenium():
     options = Options()
@@ -53,7 +54,7 @@ def collect_data_from_fastshop(driver, url, current_product, known_brands):
             title = title_element.text.strip() if title_element else ""
             original_price = original_price_element.text.strip()[3:] if original_price_element else ""
             discount_price = discount_price_element.text.strip()[3:] if discount_price_element else ""
-            rating = rating_element and "N/A"  
+            rating = rating_element and "N/A"
             link = "https://www.fastshop.com.br" + link_element if link_element else ""
             
             brand = "Unknown"
@@ -85,17 +86,27 @@ def scrape_fastshop(driver, base_url, current_product):
     products = collect_data_from_fastshop(driver, url, current_product, known_brands)
     return pd.DataFrame(products)
 
-def main(products_dict):
-    all_data = pd.DataFrame()
-    
+def scrape_product(product, base_url):
     driver = setup_selenium()
-    
     try:
-        for product, base_url in products_dict.items():
-            df = scrape_fastshop(driver, base_url, product)
-            all_data = pd.concat([all_data, df], ignore_index=True)
+        df = scrape_fastshop(driver, base_url, product)
     finally:
         driver.quit()
+    return df
+
+def main(products_dict):
+    all_data = pd.DataFrame()
+
+    with ThreadPoolExecutor(max_workers=len(products_dict)) as executor:
+        future_to_product = {executor.submit(scrape_product, product, base_url): product for product, base_url in products_dict.items()}
+        
+        for future in as_completed(future_to_product):
+            product = future_to_product[future]
+            try:
+                data = future.result()
+                all_data = pd.concat([all_data, data], ignore_index=True)
+            except Exception as e:
+                print(f"Error scraping {product}: {e}")
 
     if all_data.empty:
         print("Empty data")
@@ -105,6 +116,8 @@ def main(products_dict):
 if __name__ == "__main__":
     products_dict = {
         "Notebook": "https://www.fastshop.com.br/web/c/4611686018425306011/informatica",
-        "Smartphone": "https://www.fastshop.com.br/web/c/22561/smartphones"
+        "Smartphone": "https://www.fastshop.com.br/web/c/22561/smartphones",
+        "TV": "https://www.fastshop.com.br/web/s/tv",
+        "Tablet": "https://www.fastshop.com.br/web/c/22004/smartphones-e-tablets"
     }
     main(products_dict)
