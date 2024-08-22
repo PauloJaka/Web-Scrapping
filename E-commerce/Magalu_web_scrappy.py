@@ -90,7 +90,7 @@ def scrape_magalu(gecko_path, base_url, product_type, num_pages=1, headless=True
 
 def main():
     gecko_path = os.getenv('Driver') 
-    products_list = ["Notebook", "Smartphone"] 
+    products_list = ["Notebook", "Smartphone", "TV", "Tablet", "Ipad", "Smartwatch"] 
     num_pages = 1
 
     all_data = pd.DataFrame()
