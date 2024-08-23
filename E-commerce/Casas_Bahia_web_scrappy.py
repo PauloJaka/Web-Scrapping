@@ -68,7 +68,7 @@ def scrape_casas_bahia(driver, base_url, current_product, num_pages=1):
     all_products = []
     
     for page in range(1, num_pages + 1):
-        url = f"{base_url}?page={page}"
+        url = f"{base_url}?&page={page}"
         products = collect_data_from_casas_bahia(driver, url, current_product, known_brands)
         all_products.extend(products)
     
@@ -76,13 +76,14 @@ def scrape_casas_bahia(driver, base_url, current_product, num_pages=1):
 
 def main(products_dict):
     all_data = pd.DataFrame()
-    num_pages = 1
+    num_pages = 15
     driver = setup_selenium()
     time.sleep(5)
     try:
         for product, base_url in products_dict.items():
             df = scrape_casas_bahia(driver, base_url, product, num_pages)
             all_data = pd.concat([all_data, df], ignore_index=True)
+            time.sleep(random.uniform(5, 10)) 
     finally:
         driver.quit()
 
@@ -94,5 +95,8 @@ def main(products_dict):
 if __name__ == "__main__":
     products_dict = {
         "Notebook": "https://www.casasbahia.com.br/Notebook/b?origem=topterms",
+        #"Smartphones": "https://www.casasbahia.com.br/Smartphones/b?origem=topterms",
+        #"TV": "https://www.casasbahia.com.br/TV/b",
+        #"Tablet": "https://www.casasbahia.com.br/tablet/b"
     }
     main(products_dict)
