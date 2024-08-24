@@ -18,7 +18,6 @@ def collect_data_from_kalunga_page(url, current_product):
     }
     
     response = requests.get(url, headers=headers)
-    print(response)
     soup = BeautifulSoup(response.text, 'html.parser')
     
     products = []
@@ -79,7 +78,7 @@ def scrape_kalunga(base_url, current_product, num_pages=1):
 
 def main(products):
     all_data = pd.DataFrame()
-    num_pages = 1  
+    num_pages = 7
 
     for product in products:
         base_url = f"https://www.kalunga.com.br/busca/{product}"
