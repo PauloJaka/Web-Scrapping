@@ -9,8 +9,10 @@ import re
 from datetime import datetime
 from utils import known_brands
 import random
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def initialize_driver(gecko_path, headless=True):
+    print('driver')
     firefox_options = Options()
     if headless:
         firefox_options.add_argument("--headless")
@@ -62,26 +64,32 @@ def extract_product_info(soup, product_type):
     
     return products
 
-def scrape_americanas(gecko_path, base_url, product_type, num_pages=1, headless=True):
+def scrape_page(gecko_path, url, product_type, headless=True):
     driver = initialize_driver(gecko_path, headless)
-    all_products = []
-
-    for page in range(1, num_pages + 1):
-        url = f"{base_url}?page={page}"
-        driver.get(url)
-        time.sleep(5)  
-        html_content = driver.page_source
-        soup = BeautifulSoup(html_content, 'html.parser')
-        products = extract_product_info(soup, product_type)
-        all_products.extend(products)
-    
+    driver.get(url)
+    time.sleep(5)
+    html_content = driver.page_source
+    soup = BeautifulSoup(html_content, 'html.parser')
+    products = extract_product_info(soup, product_type)
     driver.quit()
+    return products
+
+def scrape_americanas(gecko_path, base_url, product_type, num_pages=1, headless=True):
+    all_products = []
+    urls = [f"{base_url}?page={page}" for page in range(1, num_pages + 1)]
+    
+    with ThreadPoolExecutor(max_workers=4) as executor:  
+        futures = [executor.submit(scrape_page, gecko_path, url, product_type, headless) for url in urls]
+        
+        for future in as_completed(futures):
+            all_products.extend(future.result())
+    
     return all_products
 
 def main():
     gecko_path = os.getenv('Driver')
-    products_list = ["notebook", "smartphone"]
-    num_pages = 1
+    products_list = ["notebook", "smartphone", "tv", "tablet"]
+    num_pages = 8
 
     all_data = pd.DataFrame()
 
