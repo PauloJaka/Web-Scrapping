@@ -1,42 +1,48 @@
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.options import Options
-from bs4 import BeautifulSoup
-import pandas as pd
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import os
-import re
+import pandas as pd
 from datetime import datetime
 from utils import known_brands
 import random
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def initialize_driver(gecko_path, headless=True):
-    print('driver')
-    firefox_options = Options()
-    if headless:
-        firefox_options.add_argument("--headless")
-    
+def initialize_driver(gecko_path):
+    options = Options()
+    options.add_argument("--headless")
     service = FirefoxService(executable_path=gecko_path)
-    driver = webdriver.Firefox(service=service, options=firefox_options)
+    driver = webdriver.Firefox(service=service, options=options)
     return driver
 
-def extract_product_info(soup, product_type):
+def wait_for_elements(driver, css_selector, timeout=20):
+    try:
+        WebDriverWait(driver, timeout).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, css_selector))
+        )
+    except Exception as e:
+        print(f"Error waiting for elements: {e}")
+
+def extract_product_info(driver, product_type, css_selector):
     products = []
-    product_elements = soup.select(".src__Wrapper-sc-1l8mow4-0.fsViFX .inStockCard__Wrapper-sc-1ngt5zo-0.iRvjrG")
+    product_elements = driver.find_elements(By.CSS_SELECTOR, css_selector)
 
     for item in product_elements:
         try:
-            title_element = item.select_one(".styles__Name-sc-1e4r445-0")
+            title_element = item.find_element(By.CSS_SELECTOR, ".styles__Name-sc-1e4r445-0")
             title = title_element.text.strip() if title_element else "No title"
             
-            link_element = item.select_one(".inStockCard__Link-sc-1ngt5zo-1")
-            link = "https://www.americanas.com.br" + link_element['href'] if link_element else "No link"
+            link_element = item.find_element(By.CSS_SELECTOR, ".inStockCard__Link-sc-1ngt5zo-1")
+            link = "https://www.americanas.com.br" + link_element.get_attribute('href') if link_element else "No link"
             
-            price_discount_element = item.select_one(".styles__PromotionalPrice-sc-yl2rbe-0")
+            price_discount_element = item.find_element(By.CSS_SELECTOR, ".styles__PromotionalPrice-sc-yl2rbe-0")
             price_discount = price_discount_element.text.strip().replace('R$', '').strip() if price_discount_element else ""
             
-            price_original_element = item.select_one(".sales-price")
+            price_original_element = item.find_element(By.CSS_SELECTOR, ".sales-price")
             price_original = price_original_element.text.strip().replace('R$', '').strip() if price_original_element else ""
             
             brand = "Unknown"
@@ -59,50 +65,59 @@ def extract_product_info(soup, product_type):
             })
         
         except Exception as e:
-            print(f"Error processing product: {e}")
             continue
     
     return products
 
-def scrape_page(gecko_path, url, product_type, headless=True):
-    driver = initialize_driver(gecko_path, headless)
+def scrape_page(driver, url, product_type, css_selector):
     driver.get(url)
-    time.sleep(5)
-    html_content = driver.page_source
-    soup = BeautifulSoup(html_content, 'html.parser')
-    products = extract_product_info(soup, product_type)
-    driver.quit()
-    return products
+    wait_for_elements(driver, css_selector)
+    time.sleep(3) 
+    return extract_product_info(driver, product_type, css_selector)
 
-def scrape_americanas(gecko_path, base_url, product_type, num_pages=1, headless=True):
+def scrape_americanas(product, gecko_path, num_pages=1):
+    driver = initialize_driver(gecko_path)
     all_products = []
-    urls = [f"{base_url}?page={page}" for page in range(1, num_pages + 1)]
+    css_selector = ".src__Wrapper-sc-1l8mow4-0.fsViFX .inStockCard__Wrapper-sc-1ngt5zo-0.iRvjrG"
+    base_url = f"https://www.americanas.com.br/busca/{product}"
     
-    with ThreadPoolExecutor(max_workers=4) as executor:  
-        futures = [executor.submit(scrape_page, gecko_path, url, product_type, headless) for url in urls]
-        
-        for future in as_completed(futures):
-            all_products.extend(future.result())
+    try:
+        for page in range(1, num_pages + 1):
+            url = f"{base_url}?page={page}"
+            print(f"Scraping page {page} of {num_pages} for product {product}")
+            products = scrape_page(driver, url, product, css_selector)
+            all_products.extend(products)
+    finally:
+        driver.quit()
     
     return all_products
 
-def main():
-    gecko_path = os.getenv('Driver')
-    products_list = ["notebook", "smartphone", "tv", "tablet"]
-    num_pages = 8
-
-    all_data = pd.DataFrame()
-
-    for product in products_list:
-        base_url = f"https://www.americanas.com.br/busca/{product}"
-        products = scrape_americanas(gecko_path, base_url, product, num_pages, headless=True)
-        df = pd.DataFrame(products)
-        all_data = pd.concat([all_data, df], ignore_index=True)
+def Americanas_Scrappy_Products():
+    start_time = time.time()
     
-    if all_data.empty:
-        print("No data collected")
-    else:
-        print(all_data.to_string(index=False))
+    gecko_path = os.getenv('Driver')
+    products_list = ["Notebook", "Smartphone", "TV", "Tablet", "Ipad", "Smartwatch"]
+    num_pages = 8
+    max_threads = 3
+    
+    all_data = []
+
+    with ThreadPoolExecutor(max_threads) as executor:
+        futures = {executor.submit(scrape_americanas, product, gecko_path, num_pages): product for product in products_list}
+        
+        for future in as_completed(futures):
+            try:
+                result = future.result()
+                all_data.extend(result)
+            except Exception as e:
+                print(f"Error scraping product: {e}")
+
+    df = pd.DataFrame(all_data)
+    print(df)
+    
+    end_time = time.time()
+    print(f"Execution time: {end_time - start_time:.2f} seconds")
+    return df
 
 if __name__ == "__main__":
-    main()
+    Americanas_Scrappy_Products()
