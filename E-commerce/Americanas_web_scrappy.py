@@ -72,7 +72,6 @@ def extract_product_info(driver, product_type, css_selector):
 def scrape_page(driver, url, product_type, css_selector):
     driver.get(url)
     wait_for_elements(driver, css_selector)
-    time.sleep(3) 
     return extract_product_info(driver, product_type, css_selector)
 
 def scrape_americanas(product, gecko_path, num_pages=1):
@@ -87,6 +86,10 @@ def scrape_americanas(product, gecko_path, num_pages=1):
             print(f"Scraping page {page} of {num_pages} for product {product}")
             products = scrape_page(driver, url, product, css_selector)
             all_products.extend(products)
+            
+            driver.delete_all_cookies()
+            
+            time.sleep(random.uniform(2, 5))
     finally:
         driver.quit()
     
