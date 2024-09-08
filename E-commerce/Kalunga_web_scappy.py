@@ -6,11 +6,11 @@ import re
 
 def format_price(price_text):
     price = re.findall(r'\d{1,3}(?:\.\d{3})*,\d{2}', price_text)
-    return price[0] if price else ""
+    return price[0] if price else None
 
 def format_rating(rating_text):
     rating = re.findall(r'\d+', rating_text)
-    return rating[0] if rating else ""
+    return rating[0] if rating else None
 
 def collect_data_from_kalunga_page(url, current_product):
     headers = {
@@ -37,22 +37,25 @@ def collect_data_from_kalunga_page(url, current_product):
             
             title = title_element.text.strip() if title_element else "No title"
             
-            original_price = original_price_element.text.strip() if original_price_element else ""
+            original_price = original_price_element.text.strip() if original_price_element else ''
             original_price = format_price(original_price)
 
-            discount_price = discount_price_element.text.strip() if discount_price_element else ""
+            discount_price = discount_price_element.text.strip() if discount_price_element else ''
             discount_price = format_price(discount_price)
 
-            rating = rating_element.text.strip() if rating_element else ""
+            rating = rating_element.text.strip() if rating_element else None
             rating = format_rating(rating)
 
             free_freight = free_freight_element and "Frete grátis" in free_freight_element.text
-            link = "https://www.kalunga.com.br" + link_element['href'] if link_element else ""
+            link = "https://www.kalunga.com.br" + link_element['href'] if link_element else None
+            
+            discount_price = discount_price.replace('.', '').replace(',', '.') if discount_price else None
+            original_price = original_price.replace('.', '').replace(',', '.') if original_price else None
 
             products.append({
                 'title': title,
-                'price_original': original_price,
-                'price_discount': discount_price,
+                'original_price': original_price,
+                'discount_price': discount_price,
                 'rating': rating,
                 'free_freight': free_freight,
                 'link': link,
@@ -78,7 +81,7 @@ def scrape_kalunga(base_url, current_product, num_pages=1):
 
 def main(products):
     all_data = pd.DataFrame()
-    num_pages = 7
+    num_pages = 1
 
     for product in products:
         base_url = f"https://www.kalunga.com.br/busca/{product}"
@@ -89,6 +92,7 @@ def main(products):
         print("Empty data")
     else:
         print(all_data.to_string(index=False))
+        return all_data
 
 if __name__ == "__main__":
     products_list = ["notebook", "smartphone", "tv", "tablets"]  
