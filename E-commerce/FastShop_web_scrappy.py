@@ -11,6 +11,9 @@ import os
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 def setup_selenium():
     options = Options()
@@ -19,49 +22,68 @@ def setup_selenium():
     driver = webdriver.Firefox(service=service, options=options)
     return driver
 
-def scroll_to_load_products(driver, timeout=10, scroll_pause_time=2):
+def scroll_to_load_products(driver, timeout=30, scroll_pause_time=5, max_scrolls=100):
+    wait = WebDriverWait(driver, timeout)
     last_height = driver.execute_script("return document.body.scrollHeight")
+    scroll_count = 0
+    total_products = 0
     
-    while True:
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    while scroll_count < max_scrolls:
+        # Roll
+        driver.execute_script("window.scrollBy(0, document.body.scrollHeight);")
         time.sleep(scroll_pause_time)
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:
+        
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        product_elements = soup.select('li[data-fs-product-grid-item="true"]')
+        new_total_products = len(product_elements)
+        
+        if new_total_products == total_products:
+            print("No new products loaded or reached the end of the page.")
             break
-        last_height = new_height
+        
+        total_products = new_total_products
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        scroll_count += 1
+        print(f"Scrolled {scroll_count} times. Height: {last_height}. Total products: {total_products}")
+    
+    print(f"Finished scrolling after {scroll_count} scrolls. Total products collected: {total_products}")
+
+
 
 def collect_data_from_fastshop(driver, url, current_product, known_brands):
     driver.get(url)
-    driver.implicitly_wait(10)
-
-    scroll_to_load_products(driver)
+    driver.implicitly_wait(25)
+    scroll_to_load_products(driver) 
 
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     products = []
-    product_elements = soup.select("app-product-item")
-
+    product_elements = soup.select('li[data-fs-product-grid-item="true"]')
+    print(f"Found {len(product_elements)} product elements on the page.")
+    
     if not product_elements:
-        return products
+        print("No products found.")
     
     for item in product_elements:
         try:
-            title_element = item.select_one("a.without-scroll .prod-title")
-            original_price_element = item.select_one(".list-price .value")
-            discount_price_element = item.select_one(".price-current .price-fraction")
-            rating_element = item.select_one("app-rating-stars")
-            link_element = item.select_one("a.without-scroll")['href']
+            title_element = item.select_one('a[data-fs-link="true"]')
+            original_price_element = item.select_one('span[data-fs-price-variant="listing"] span[data-testid="price-value"]')
+            discount_price_element = item.select_one('span[data-fs-price-variant="selling"] span[data-testid="price-value"]')
 
-            title = title_element.text.strip() if title_element else ""
+            link_element = item.select_one("a.without-scroll")
+
+            title = title_element['title'].strip() if title_element else ""
             original_price = original_price_element.text.strip()[3:] if original_price_element else ""
             discount_price = discount_price_element.text.strip()[3:] if discount_price_element else ""
-            rating = rating_element and "N/A"
-            link = "https://www.fastshop.com.br" + link_element if link_element else ""
-            
+            link = "https://www.fastshop.com.br" + link_element['href'] if link_element else ""
+
             brand = "Unknown"
             for known_brand in known_brands:
                 if known_brand.lower() in title.lower():
                     brand = known_brand
                     break
+                
+            discount_price = discount_price.replace('.', '').replace(',', '.') if discount_price else None
+            original_price = original_price.replace('.', '').replace(',', '.') if original_price else None
 
             products.append({
                 'title': title,
@@ -71,15 +93,18 @@ def collect_data_from_fastshop(driver, url, current_product, known_brands):
                 'link': link,
                 'rating': round(random.uniform(3.5, 5.0), 1),
                 'free_freight': random.choice([True, False]),
-                'product': current_product,
-                'CreatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'category': current_product,
+                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'updated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'website': 'FastShop'
             })
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error processing product: {e}")
             continue
+    
+    print(f"Total products collected: {len(products)}")
     return products
+
 
 def scrape_fastshop(driver, base_url, current_product):
     url = base_url
@@ -94,10 +119,19 @@ def scrape_product(product, base_url):
         driver.quit()
     return df
 
-def main(products_dict):
+def main():
     all_data = pd.DataFrame()
+    
+    products_dict = {
+        "Notebook": "https://site.fastshop.com.br/informatica/Notebooks/Notebooks",
+        "Smartphone": "https://site.fastshop.com.br/Smartphones-e-Tablets/Smartphones-e-Celulares",
+        "TV": "https://site.fastshop.com.br/video/tvs",
+        "Smartwatch": "https://site.fastshop.com.br/Smartphones-e-Tablets/Smartwatch",
+        "Tablet": "https://site.fastshop.com.br/Smartphones-e-Tablets/Tablets"
+        
+    }
 
-    with ThreadPoolExecutor(max_workers=len(products_dict)) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         future_to_product = {executor.submit(scrape_product, product, base_url): product for product, base_url in products_dict.items()}
         
         for future in as_completed(future_to_product):
@@ -112,12 +146,8 @@ def main(products_dict):
         print("Empty data")
     else:
         print(all_data.to_string(index=False))
+        return all_data
 
 if __name__ == "__main__":
-    products_dict = {
-        "Notebook": "https://www.fastshop.com.br/web/c/4611686018425306011/informatica",
-        "Smartphone": "https://www.fastshop.com.br/web/c/22561/smartphones",
-        "TV": "https://www.fastshop.com.br/web/s/tv",
-        "Tablet": "https://www.fastshop.com.br/web/c/22004/smartphones-e-tablets"
-    }
-    main(products_dict)
+
+    main()
