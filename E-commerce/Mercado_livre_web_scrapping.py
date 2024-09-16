@@ -82,7 +82,7 @@ def scrape_mercado_livre(base_url, current_product, num_pages=1):
 
 def main(products):
     all_data = pd.DataFrame()
-    num_pages = 1  
+    num_pages = 10
 
     for product in products:
         base_url = f"https://lista.mercadolivre.com.br/{product}"
@@ -95,5 +95,5 @@ def main(products):
         print(all_data.to_string(index=False))
 
 if __name__ == "__main__":
-    products_list = ["notebook", "smartphone", "TV", "tablet"]  
+    products_list = ["notebook"]#, "smartphone", "TV", "tablet"]  
     main(products_list)
