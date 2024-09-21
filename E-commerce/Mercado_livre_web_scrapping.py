@@ -22,14 +22,14 @@ def collect_data_from_page(url, current_product, known_brands):
     
     for item in product_elements:
         try:
-            title_element = item.select_one(".ui-search-item__title")
+            link_elementText = item.select_one('a')
             original_price_element = item.select_one(".andes-money-amount__fraction")  
             rating_element = item.select_one(".ui-search-reviews__rating-number")
             free_freight_element = item.select_one(".ui-pb-highlight-content .ui-pb-highlight")
             link_element = item.select_one("a.ui-search-link")
             discount_price_element = item.select_one(".ui-search-installments-prefix span") 
             
-            title = title_element.text.strip() if title_element else "No title"
+            title = link_elementText.text.strip()if link_elementText else "No title"
             original_price = original_price_element.text.strip() if original_price_element else "No original price"  
             rating = rating_element.text.strip() if rating_element else 'No rating'
             free_freight = free_freight_element and "Frete grátis" in free_freight_element.text
