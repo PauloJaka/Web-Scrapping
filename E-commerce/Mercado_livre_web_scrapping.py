@@ -33,7 +33,11 @@ def collect_data_from_page(url, current_product, known_brands):
             original_price = original_price_element.text.strip() if original_price_element else "No original price"  
             rating = rating_element.text.strip() if rating_element else 'No rating'
             free_freight = free_freight_element and "Frete grátis" in free_freight_element.text
-            link = link_element['href'] if link_element else "No link"
+
+            link_element = item.select_one("a.ui-search-link")
+            if not link_element:
+                link_element = item.select_one("h2.poly-box.poly-component__title a")
+            link = link_element['href'] if link_element else None
 
             if discount_price_element:  
                 discount_price_text = discount_price_element.text.strip()  
