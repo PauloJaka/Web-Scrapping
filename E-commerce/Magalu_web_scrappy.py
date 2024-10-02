@@ -25,7 +25,11 @@ def initialize_driver(gecko_path, headless=True):
 
 def extract_product_info(soup, product_type):
     products = []
-    ul_elements = soup.find_all('ul', class_=lambda c: c and c.startswith('sc-hknOHE'))
+    ul_elements = soup.find_all('ul') 
+    if ul_elements:
+        ul_element = ul_elements[0]  
+    else:
+        print("Nenhum elemento <ul> foi encontrado")
     
     if ul_elements:
         for ul_element in ul_elements:
@@ -102,7 +106,7 @@ def main():
     
     gecko_path = os.getenv('Driver')
     products_list = ["Notebook", "Smartphone", "TV", "Tablet", "Ipad", "Smartwatch"]
-    max_threads = len(products_list)
+    max_threads = 1
     
     all_data = []
 
